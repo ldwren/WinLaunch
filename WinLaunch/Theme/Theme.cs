@@ -12,16 +12,6 @@ namespace WinLaunch
     {
         public static Theme CurrentTheme = null;
 
-        //obsolete
-        #region Grid Settings
-        public int Columns { get; set; }
-        public int Rows { get; set; }
-
-        public int FolderColumns { get; set; }
-        public int FolderRows { get; set; }
-        #endregion
-
-
         #region Bitmaps
         [System.Xml.Serialization.XmlIgnore]
         public BitmapSource CloseBox { get; set; }
@@ -379,11 +369,6 @@ namespace WinLaunch
         /// </summary>
         public Theme()
         {
-            Columns = -1;
-            Rows = -1;
-            FolderColumns = -1;
-            FolderRows = -1;
-
             UseVectorFolder = false;
             StretchFolderBackground = false;
 
