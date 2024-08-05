@@ -24,14 +24,17 @@ namespace WinLaunch
 
                 if (LoadingAssets)
                 {
-                    if (LoadingText.Visibility != System.Windows.Visibility.Visible)
-                        LoadingText.Visibility = System.Windows.Visibility.Visible;
+                    gdLoading.Visibility = System.Windows.Visibility.Visible;
+                    spSearchAndAssistantContainer.Visibility = System.Windows.Visibility.Collapsed;
                 }
                 else
                 {
-                    if (LoadingText.Visibility != System.Windows.Visibility.Hidden)
-                        LoadingText.Visibility = System.Windows.Visibility.Hidden;
-
+                    if (gdLoading.Visibility != System.Windows.Visibility.Hidden)
+                    {
+                        gdLoading.Visibility = System.Windows.Visibility.Hidden;
+                        spSearchAndAssistantContainer.Visibility = System.Windows.Visibility.Visible;
+                    }
+                        
                     if (SBM.IC.Items.Count == 0)
                     {
                         SBM.StopMoveMode();
@@ -154,50 +157,6 @@ namespace WinLaunch
             //correct for taskbar positioning
             Xoffset -= (ScreenLeft - ScreenBoundsLeft);
             Yoffset -= (ScreenTop - ScreenBoundsTop);
-
-            //else if (Theme.CurrentTheme.BackgroundMode == BackgroundMode.Center)
-            //{
-            //    Xoffset -= (ScreenLeft % ScreenWidth);
-            //    Yoffset -= (ScreenTop % ScreenHeight);
-
-            //    //Center
-            //    WPWidth = ScreenWidth;
-            //    WPHeight = WPWidth * BackgroundHWRatio;
-
-            //    if (WPHeight < ScreenHeight)
-            //    {
-            //        WPHeight = ScreenHeight;
-            //        WPWidth = WPHeight / BackgroundHWRatio;
-
-            //        Xoffset -= (WPWidth - ScreenWidth) / 2.0;
-            //    }
-            //    else
-            //    {
-            //        Yoffset -= (WPHeight - ScreenHeight) / 2.0;
-            //    }
-            //}
-            //else if (Theme.CurrentTheme.BackgroundMode == BackgroundMode.Panorama)
-            //{
-            //    //Center
-            //    WPWidth = ScreenWidth;
-            //    WPHeight = WPWidth * BackgroundHWRatio;
-
-            //    if (WPHeight < ScreenHeight)
-            //    {
-            //        WPHeight = ScreenHeight;
-            //        WPWidth = WPHeight / BackgroundHWRatio;
-
-            //        Xoffset -= (WPWidth - ScreenWidth) / 2.0;
-            //    }
-            //    else
-            //    {
-            //        Yoffset -= (WPHeight - ScreenHeight) / 2.0;
-            //    }
-
-            //    PanoramaScrollWidth = WPWidth - ScreenWidth;
-
-            //    Xoffset -= PanoramaScrollWidth * PanoramaOffset;
-            //}
 
             //set values
             BackgroundPosition = new Rect(Xoffset, Yoffset, WPWidth, WPHeight);
@@ -419,7 +378,7 @@ namespace WinLaunch
                 this.Wallpaperbottom.Opacity = CanvasOpacityAnim.Value;
                 this.PageCounter.Opacity = CanvasOpacityAnim.Value;
                 this.MainCanvas.Opacity = CanvasOpacityAnim.Value;
-                this.Wallpapernoblur.Opacity = 0.0;// 1.0 - CanvasOpacityAnim.Value;
+                this.Wallpapernoblur.Opacity = 1.0 - CanvasOpacityAnim.Value;
             }
             else
             {

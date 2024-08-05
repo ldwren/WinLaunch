@@ -2,14 +2,8 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Net;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.AccessControl;
-using System.Security.Principal;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -140,7 +134,7 @@ namespace WinLaunch
                 //wake main instance of WinLaunch then exit
                 Environment.Exit(-1);
             }
-            
+
             InitializeComponent();
 
             CanvasOpacityAnim = new AnimationHelper(0.0, 1.0);
@@ -175,35 +169,19 @@ namespace WinLaunch
             //load theme
             Theme.CurrentTheme = Theme.LoadTheme();
 
-            if (Theme.CurrentTheme.Rows != -1)
-            {
-                //old style 
-                Settings.CurrentSettings.Columns = Theme.CurrentTheme.Columns;
-                Settings.CurrentSettings.Rows = Theme.CurrentTheme.Rows;
-                Settings.CurrentSettings.FolderColumns = Theme.CurrentTheme.FolderColumns;
-                Settings.CurrentSettings.FolderRows = Theme.CurrentTheme.FolderRows;
-
-                Settings.SaveSettings(Settings.CurrentSettings);
-
-                Theme.CurrentTheme.Columns = -1;
-                Theme.CurrentTheme.Rows = -1;
-                Theme.CurrentTheme.FolderColumns = -1;
-                Theme.CurrentTheme.FolderRows = -1;
-
-                Theme.SaveTheme(Theme.CurrentTheme);
-            }
-
-            //enable if aero is in use and available
-            //if (Theme.CurrentTheme.UseAeroBlur && GlassUtils.IsBlurBehindAvailable())
-            if(Settings.CurrentSettings.DeskMode && Settings.CurrentSettings.LegacyDeskMode)
+            if (Settings.CurrentSettings.DeskMode && Settings.CurrentSettings.LegacyDeskMode)
             {
                 //disable on legacy desk mode
                 this.AllowsTransparency = false;
             }
+            else if (Theme.CurrentTheme.UseAeroBlur && GlassUtils.IsBlurBehindAvailable())
+            {
+                //enable if aero is in use and available
+                this.AllowsTransparency = true;
+            }
             else
             {
-                //with the new desk mode we can enable this all the time
-                this.AllowsTransparency = true;
+                this.AllowsTransparency = false;
             }
         }
 
@@ -304,7 +282,6 @@ namespace WinLaunch
         #endregion Init
 
         #region Utils
-
         private void SetHomeDirectory()
         {
             System.IO.Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
@@ -416,7 +393,7 @@ namespace WinLaunch
                 SBM.ActiveFolder.Name = FolderTitleNew.Text;
             }
 
-            PerformItemBackup();
+            TriggerSaveItemsDelayed();
         }
 
         private void FolderTitle_MouseDown(object sender, MouseButtonEventArgs e)
@@ -427,7 +404,7 @@ namespace WinLaunch
 
         private string ValidateFolderName(string FolderName)
         {
-            if (FolderName == "")
+            if (string.IsNullOrWhiteSpace(FolderName))
                 FolderName = "NewFolder";
 
             return FolderName;
@@ -470,6 +447,8 @@ namespace WinLaunch
                 DeactivateFolderRenaming();
             }
         }
+
+
 
         #endregion Folder Title Renaming
     }

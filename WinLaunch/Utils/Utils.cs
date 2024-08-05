@@ -2,6 +2,7 @@
 using Microsoft.Win32;
 using Shell32;
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -12,6 +13,7 @@ using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms;
@@ -162,6 +164,40 @@ namespace WinLaunch
             while (target != null && !(target is T));
             return target as T;
         }
+
+        public static T FindChild<T>(DependencyObject parent, string childName) where T : DependencyObject
+        {
+            // Search all children
+            if (parent == null) return null;
+            T foundChild = null;
+            int childrenCount = VisualTreeHelper.GetChildrenCount(parent);
+
+            for (int i = 0; i < childrenCount; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                T childType = child as T;
+                if (childType == null)
+                {
+                    foundChild = FindChild<T>(child, childName);
+                    if (foundChild != null) break;
+                }
+                else if (!string.IsNullOrEmpty(childName))
+                {
+                    var frameworkElement = child as FrameworkElement;
+                    if (frameworkElement != null && frameworkElement.Name == childName)
+                    {
+                        foundChild = (T)child;
+                        break;
+                    }
+                }
+                else
+                {
+                    foundChild = (T)child;
+                    break;
+                }
+            }
+            return foundChild;
+        }
     }
 
     public class LocalizedDescriptionAttribute : DescriptionAttribute
@@ -222,6 +258,36 @@ namespace WinLaunch
             return DPIScale;
         }
 
+        public static void UpdateDPIScale()
+        {
+            DPIScale = -1.0;
+            GetDPIScale();
+        }
+
+        //async WebClient DownloadString method
+        public static Task<string> DownloadStringTaskAsync(WebClient client, string url)
+        {
+            var tcs = new TaskCompletionSource<string>();
+
+            DownloadStringCompletedEventHandler completed = null;
+            completed = (sender, args) =>
+            {
+                client.DownloadStringCompleted -= completed;
+
+                if (args.Error != null)
+                    tcs.TrySetException(args.Error);
+                else if (args.Cancelled)
+                    tcs.TrySetCanceled();
+                else
+                    tcs.TrySetResult(args.Result);
+            };
+
+            client.DownloadStringCompleted += completed;
+            client.DownloadStringAsync(new Uri(url));
+
+            return tcs.Task;
+        }
+
         public static string GetShortcutTargetFile(string shortcutFilename)
         {
             try
@@ -232,7 +298,7 @@ namespace WinLaunch
                 Shell shell = new Shell();
                 Shell32.Folder folder = shell.NameSpace(pathOnly);
 
-                if(folder == null)
+                if (folder == null)
                 {
                     return null;
                 }
@@ -241,7 +307,7 @@ namespace WinLaunch
                 if (folderItem != null)
                 {
                     Shell32.ShellLinkObject link = (Shell32.ShellLinkObject)folderItem.GetLink;
-                    
+
                     return link.Path;
                 }
             }
@@ -548,13 +614,30 @@ namespace WinLaunch
             }
         }
 
-        public static BitmapSource BlurImage(BitmapSource SourceImage, double radius, double scale = 0.1)
+        public static double RemapRangeClamped(double value, double from1, double to1, double from2, double to2)
+        {
+            if (value < from1)
+                return from2;
+
+            if (value > to1)
+                return to2;
+
+            return (value - from1) / (to1 - from1) * (to2 - from2) + from2;
+        }
+
+        public static BitmapSource BlurImage(BitmapSource SourceImage, double radius)
         {
             if (SourceImage == null)
                 return null;
 
             try
             {
+                //smart scale for blur
+                double scale = RemapRangeClamped(radius, 0.0, 20.0, 1.0, 0.1);
+
+                //compenstate for scale
+                radius *= RemapRangeClamped(scale, 0.1, 1.0, 1.0, 3.0);
+
                 //construct scene
                 Grid maingrid = new Grid();
                 //maingrid.Margin = new Thickness(-radius);

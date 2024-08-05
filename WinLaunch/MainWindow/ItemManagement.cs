@@ -11,6 +11,47 @@ namespace WinLaunch
 {
     partial class MainWindow : Window
     {
+        DesktopFileWatcher desktopWatcher;
+
+        private void StartDesktopWatcher()
+        {
+            StopDesktopWatcher();
+
+            desktopWatcher = new DesktopFileWatcher();
+            desktopWatcher.FilesAdded += desktopWatcher_FilesAdded;
+        }
+
+        private void StopDesktopWatcher()
+        {
+            if (desktopWatcher != null)
+            {
+                desktopWatcher.FilesAdded -= desktopWatcher_FilesAdded;
+                desktopWatcher = null;
+            }
+        }
+
+        private void desktopWatcher_FilesAdded(object sender, EventArgsFilesAdded e)
+        {
+            SBM.CloseFolderInstant();
+            SBM.EndSearch();
+
+            foreach (var file in e.Files)
+            {
+                //check if the file is already added
+                if (SBM.FindItemsByExactName(Path.GetFileNameWithoutExtension(file)).Count > 0)
+                {
+                    continue;
+                }
+
+                AddFile(file);
+
+                if(Settings.CurrentSettings.DeleteDesktopLinksAfterAdding)
+                {
+                    File.Delete(file);
+                }
+            }
+        }
+
         private void AddDefaultApps()
         {
             SBM.CloseFolderInstant();
@@ -34,7 +75,7 @@ namespace WinLaunch
             {
                 if (file.EndsWith(".lnk"))
                 {
-                    if (SBM.GetItemsByName(Path.GetFileNameWithoutExtension(file)).Count == 0)
+                    if (SBM.FindItemsByExactName(Path.GetFileNameWithoutExtension(file)).Count == 0)
                         filesToAdd.Add(file);
                 }
             }
@@ -57,7 +98,7 @@ namespace WinLaunch
                 {
                     if (file.EndsWith(".lnk"))
                     {
-                        if (SBM.GetItemsByName(Path.GetFileNameWithoutExtension(file)).Count == 0)
+                        if (SBM.FindItemsByExactName(Path.GetFileNameWithoutExtension(file)).Count == 0)
                             numLnk++;
                     }
                 }
@@ -73,7 +114,7 @@ namespace WinLaunch
                     {
                         if (file.EndsWith(".lnk"))
                         {
-                            if (SBM.GetItemsByName(Path.GetFileNameWithoutExtension(file)).Count == 0)
+                            if (SBM.FindItemsByExactName(Path.GetFileNameWithoutExtension(file)).Count == 0)
                                 filesToAdd.Add(file);
                         }
                     }
@@ -99,7 +140,7 @@ namespace WinLaunch
                 var directoryFiles = Directory.GetFiles(directory);
 
                 //create a folder and add all items
-                SBItem Folder = new SBItem(Path.GetFileName(directory), "", "Folder", null, "", SBItem.FolderIcon);
+                SBItem Folder = new SBItem(Path.GetFileName(directory), "", "", "Folder", null, "", SBItem.FolderIcon);
                 Folder.IsFolder = true;
 
                 int GridIndex = 0;
@@ -122,19 +163,16 @@ namespace WinLaunch
                 Folder.UpdateFolderIcon(true);
             }
 
+            TriggerSaveItemsDelayed();
+
             if (Settings.CurrentSettings.SortItemsAlphabetically || Settings.CurrentSettings.SortFolderContentsOnly)
             {
                 SortItemsAlphabetically();
-            }
-            else
-            {
-                PerformItemBackup();
             }
         }
 
         public void SortItemsAlphabetically()
         {
-            
             var items = new List<SBItem>();
             var folders = new List<SBItem>();
 
@@ -227,7 +265,7 @@ namespace WinLaunch
             //update page count
             SBM.SP.TotalPages = SBM.GM.GetUsedPages();
 
-            PerformItemBackup();
+            TriggerSaveItemsDelayed();
         }
 
         private void InsertFolders(List<SBItem> folders, int ItemsPerPage, ref int GridIndex, ref int Page)
@@ -276,26 +314,7 @@ namespace WinLaunch
             //update page count
             SBM.SP.TotalPages = SBM.GM.GetUsedPages();
 
-            PerformItemBackup();
-        }
-
-        //gets called whenever a backup should be performed
-        public void PerformItemBackup()
-        {
-            SBM.EndSearch();
-
-            if (LoadingAssets)
-                return;
-
-            try
-            {
-                SBM.IC.SaveToXML(PortabilityManager.ItemsPath);
-                backupManager.AddBackup(PortabilityManager.ItemsPath);
-            }
-            catch (Exception e)
-            {
-                MessageBox.Show("Could not save items" + e.Message);
-            }
+            TriggerSaveItemsDelayed();
         }
 
         private SBItem PrepareFile(string File)
@@ -363,7 +382,7 @@ namespace WinLaunch
                     bmps = MiscUtils.GetFileThumbnail(File);
                 }
 
-                return new SBItem(Name, "", Path, null, "", bmps);
+                return new SBItem(Name, "", "", Path, null, "", bmps);
             }
             catch (Exception ex)
             {
